@@ -1,0 +1,341 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "defaultValue": "tmfr-customer-api",
+            "type": "string"
+        },
+        "hostingPlanName": {
+            "defaultValue": "tmfr-customer-api-plan",
+            "type": "string"
+        },
+        "appInsightsLocation": {
+            "type": "string"
+        },
+        "vaults_CustomerProject_name": {
+            "defaultValue": "tmfr-customer-api-key",
+            "type": "String"
+        },
+        "servers_tmfr_customerproject_name": {
+            "defaultValue": "tmfr-customer-api-server",
+            "type": "String"
+        },
+        "DbPassword": {
+            "type": "securestring"
+        },
+        "serverfarms_tmfr_customerproject_plan_name": {
+            "defaultValue": "tmfr-customer-api-plan",
+            "type": "String"
+        }
+    },
+    "variables": {
+        "DatabaseUser": "tmfr",
+        "DatabaseConnectionString": "[concat('Data Source=tcp:', parameters('servers_tmfr_customerproject_name') ,'.database.windows.net,1433;Initial Catalog=', parameters('servers_tmfr_customerproject_name') ,';User Id=tmfr;Password=', parameters('DbPassword'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2016-10-01",
+            "name": "[parameters('vaults_CustomerProject_name')]",
+            "location": "westeurope",
+            "properties": {
+                "sku": {
+                    "family": "A",
+                    "name": "Standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(concat('Microsoft.Web/sites/', parameters('webAppName')), '2016-08-01', 'Full').identity.principalId]",
+                        "permissions": {
+                            "keys": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore"
+                            ],
+                            "secrets": [
+                                "Get",
+                                "List",
+                                "Set",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore"
+                            ],
+                            "certificates": [
+                                "Get",
+                                "List",
+                                "Update",
+                                "Create",
+                                "Import",
+                                "Delete",
+                                "Recover",
+                                "Backup",
+                                "Restore",
+                                "ManageContacts",
+                                "ManageIssuers",
+                                "GetIssuers",
+                                "ListIssuers",
+                                "SetIssuers",
+                                "DeleteIssuers"
+                            ]
+                        }
+                    }
+                ],
+                "enabledForDeployment": false,
+                "enabledForDiskEncryption": false,
+                "enabledForTemplateDeployment": true
+            }
+        },
+        {
+            "type": "Microsoft.Sql/servers",
+            "apiVersion": "2015-05-01-preview",
+            "name": "[parameters('servers_tmfr_customerproject_name')]",
+            "location": "westeurope",
+            "kind": "v12.0",
+            "properties": {
+                "administratorLogin": "tmfr",
+                "administratorLoginPassword": "[parameters('DbPassword')]",
+                "version": "12.0"
+            }
+        },
+        {
+            "type": "Microsoft.Sql/servers/firewallRules",
+            "apiVersion": "2015-05-01-preview",
+            "name": "[concat(parameters('servers_tmfr_customerproject_name'), '/AllowAllWindowsAzureIps')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', parameters('servers_tmfr_customerproject_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2016-09-01",
+            "name": "[parameters('serverfarms_tmfr_customerproject_plan_name')]",
+            "location": "West Europe",
+            "sku": {
+                "name": "B1",
+                "tier": "Basic",
+                "size": "B1",
+                "family": "B",
+                "capacity": 1
+            },
+            "kind": "app",
+            "properties": {
+                "name": "[parameters('serverfarms_tmfr_customerproject_plan_name')]",
+                "perSiteScaling": false,
+                "reserved": false,
+                "targetWorkerCount": 0,
+                "targetWorkerSizeId": 0
+            }
+        },
+        {
+            "type": "Microsoft.KeyVault/vaults/secrets",
+            "apiVersion": "2016-10-01",
+            "name": "[concat(parameters('vaults_CustomerProject_name'), '/ConnectionString')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('vaults_CustomerProject_name'))]"
+            ],
+            "properties": {
+                "value": "[variables('DatabaseConnectionString')]",
+                "contentType": "string",
+                "attributes": {
+                    "enabled": true
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Sql/servers/databases",
+            "apiVersion": "2017-03-01-preview",
+            "name": "[concat(parameters('servers_tmfr_customerproject_name'), '/', parameters('servers_tmfr_customerproject_name'))]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', parameters('servers_tmfr_customerproject_name'))]"
+            ],
+            "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+            },
+            "kind": "v12.0,user",
+            "properties": {
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "maxSizeBytes": 1073741824,
+                "catalogCollation": "SQL_Latin1_General_CP1_CI_AS",
+                "zoneRedundant": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "name": "[parameters('webAppName')]",
+            "apiVersion": "2016-08-01",
+            "location": "[resourceGroup().location]",
+
+            "tags": {
+                "[concat('hidden-related:', '/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]": "empty",
+                "displayname": "Website"
+            },
+            "resources": [
+                {
+                    "type": "siteextensions",
+                    "name": "Microsoft.ApplicationInsights.AzureWebSites",
+                    "apiVersion": "2015-08-01",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/Sites', parameters('webAppName'))]"
+                    ],
+                    "properties": {
+                    }
+                }
+            ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_tmfr_customerproject_plan_name'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(resourceId('microsoft.insights/components/', parameters('webAppName')), '2015-05-01').InstrumentationKey]"
+                        },
+                        {
+                            "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                            "value": "6.9.1"
+                        }
+                    ],
+                    "phpVersion": "7.1"
+                },
+                "name": "[parameters('webAppName')]",
+                "hostingEnvironment": ""
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_tmfr_customerproject_plan_name'))]",
+                "[resourceId('microsoft.insights/components/', parameters('webAppName'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2016-08-01",
+            "name": "[concat(parameters('webAppName'), '/web')]",
+            "location": "West Europe",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+            ],
+            "tags": {
+                "[concat('hidden-related:', '/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]": "empty"
+            },
+            "properties": {
+                "numberOfWorkers": 1,
+                "defaultDocuments": [
+                    "Default.htm",
+                    "Default.html",
+                    "Default.asp",
+                    "index.htm",
+                    "index.html",
+                    "iisstart.htm",
+                    "default.aspx",
+                    "index.php",
+                    "hostingstart.html"
+                ],
+                "netFrameworkVersion": "v4.0",
+                "phpVersion": "7.1",
+                "pythonVersion": "",
+                "nodeVersion": "",
+                "linuxFxVersion": "",
+                "requestTracingEnabled": false,
+                "remoteDebuggingEnabled": false,
+                "remoteDebuggingVersion": "VS2017",
+                "httpLoggingEnabled": false,
+                "logsDirectorySizeLimit": 35,
+                "detailedErrorLoggingEnabled": false,
+                "publishingUsername": "$tmfr-customerproject",
+                "scmType": "VSTSRM",
+                "use32BitWorkerProcess": false,
+                "webSocketsEnabled": false,
+                "alwaysOn": false,
+                "appCommandLine": "",
+                "managedPipelineMode": "Integrated",
+                "virtualApplications": [
+                    {
+                        "virtualPath": "/",
+                        "physicalPath": "site\\wwwroot",
+                        "preloadEnabled": false,
+                        "virtualDirectories": null
+                    }
+                ],
+                "winAuthAdminState": 0,
+                "winAuthTenantState": 0,
+                "customAppPoolIdentityAdminState": false,
+                "customAppPoolIdentityTenantState": false,
+                "loadBalancing": "LeastRequests",
+                "routingRules": [
+                ],
+                "experiments": {
+                    "rampUpRules": [
+                    ]
+                },
+                "autoHealEnabled": false,
+                "vnetName": "",
+                "siteAuthEnabled": false,
+                "siteAuthSettings": {
+                    "enabled": null,
+                    "unauthenticatedClientAction": null,
+                    "tokenStoreEnabled": null,
+                    "allowedExternalRedirectUrls": null,
+                    "defaultProvider": null,
+                    "clientId": null,
+                    "clientSecret": null,
+                    "clientSecretCertificateThumbprint": null,
+                    "issuer": null,
+                    "allowedAudiences": null,
+                    "additionalLoginParams": null,
+                    "isAadAutoProvisioned": false,
+                    "googleClientId": null,
+                    "googleClientSecret": null,
+                    "googleOAuthScopes": null,
+                    "facebookAppId": null,
+                    "facebookAppSecret": null,
+                    "facebookOAuthScopes": null,
+                    "twitterConsumerKey": null,
+                    "twitterConsumerSecret": null,
+                    "microsoftAccountClientId": null,
+                    "microsoftAccountClientSecret": null,
+                    "microsoftAccountOAuthScopes": null
+                },
+                "localMySqlEnabled": false,
+                "managedServiceIdentityId": 7512,
+                "http20Enabled": false,
+                "minTlsVersion": "1.2",
+                "ftpsState": "AllAllowed",
+                "reservedInstanceCount": 0,
+                "fileChangeAuditEnabled": false
+            }
+        },
+
+        {
+            "type": "Microsoft.Insights/components",
+            "name": "[parameters('webAppName')]",
+            "apiVersion": "2014-04-01",
+            "location": "[parameters('appInsightsLocation')]",
+            "tags": {
+                "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('webAppName'))]": "Resource"
+            },
+            "properties": {
+                "applicationId": "[parameters('webAppName')]",
+                "Request_Source": "AzureTfsExtensionAzureProject"
+            }
+        }
+    ]
+}
