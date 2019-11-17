@@ -1,2 +1,11 @@
+addons:
+  snaps:
+  - name: dotnet-sdk
+    classic: true
+    channel: latest/beta
+sudo: required
 language: csharp
-solution: CustomerAPI.sln
+mono: none
+script:
+  - sudo snap alias dotnet-sdk.dotnet dotnet
+  - dotnet --versionsolution: CustomerAPI.sln
