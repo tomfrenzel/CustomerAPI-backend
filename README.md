@@ -1,1 +1,2 @@
+[![GitHub issues](https://img.shields.io/github/issues/tomfrenzel/CustomerAPI-backend)](https://github.com/tomfrenzel/CustomerAPI-backend/issues) [![GitHub license](https://img.shields.io/github/license/tomfrenzel/CustomerAPI-backend)](https://github.com/tomfrenzel/CustomerAPI-backend/blob/master/LICENSE) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/tomfrenzel/CustomerAPI-backend) [![Build Status](https://travis-ci.com/tomfrenzel/CustomerAPI-backend.svg?branch=master)](https://travis-ci.com/tomfrenzel/CustomerAPI-backend)
 # CustomerAPI-backend
