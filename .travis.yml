@@ -1,4 +1,3 @@
-sudo: required
 language: csharp
 dotnet: 3.0
 mono: none
