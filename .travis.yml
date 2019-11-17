@@ -2,5 +2,7 @@ language: csharp
 dotnet: 3.0
 mono: none
 solution: CustomerAPI.sln
+install:
+- dotnet restore
 script:
-  - ./build.sh
+- dotnet build
