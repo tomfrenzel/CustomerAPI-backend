@@ -34,7 +34,7 @@ namespace CustomerAPI
                     .AllowAnyMethod()
                     .AllowAnyHeader());
             });
-            services.AddControllers();
+            services.AddControllers().AddNewtonsoftJson();
 
             services.AddDbContext<CustomerAPIContext>(options =>
                     options.UseSqlServer(Configuration["ConnectionString"]));
