@@ -1,8 +1,5 @@
 # ASP.NET Core (.NET Framework)
-- task: UseDotNet@2
-  inputs:
-    packageType: 'sdk'
-    version: '3.x'
+
 
 # Build and test ASP.NET Core projects targeting the full .NET Framework.
 # Add steps that publish symbols, save build artifacts, and more:
@@ -20,6 +17,10 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '3.x'
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
