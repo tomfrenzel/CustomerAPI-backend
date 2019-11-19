@@ -30,7 +30,7 @@ namespace CustomerAPI
             services.AddCors(options =>
             {
                 options.AddPolicy("CorsPolicy",
-                    builder => builder.AllowAnyOrigin()
+                    builder => builder.WithOrigins("https://tmfr-customerapi-app.azurewebsites.net/")
                     .AllowAnyMethod()
                     .AllowAnyHeader());
             });
